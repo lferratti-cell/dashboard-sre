@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Envíos Diarios — Dashboard</title>
+  <style>
+    :root {
+      --bg:      #0c1523;
+      --s1:      #162030;
+      --s2:      #1d2d42;
+      --s3:      #243550;
+      --acc:     #4f8ef7;
+      --grn:     #22c55e;
+      --red:     #ef4444;
+      --amb:     #f59e0b;
+      --pur:     #a78bfa;
+      --txt:     #e8edf5;
+      --txt2:    #6b82a0;
+      --brd:     #1e3050;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;padding:20px 24px}
+
+    /* ── header ── */
+    .hdr{display:flex;justify-content:space-between;align-items:center;
+         margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--brd)}
+    .hdr-l h1{font-size:22px;font-weight:800;letter-spacing:-.5px}
+    .hdr-l h1 span{color:var(--acc)}
+    .live{display:inline-flex;align-items:center;gap:6px;font-size:11px;
+          color:var(--grn);margin-top:5px;text-transform:uppercase;letter-spacing:.5px}
+    .dot{width:7px;height:7px;background:var(--grn);border-radius:50%;animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+    .hdr-r{text-align:right}
+    .hdr-r .date{font-size:15px;font-weight:600}
+    .hdr-r .sub{font-size:12px;color:var(--txt2);margin-top:4px}
+
+    /* ── week tabs ── */
+    .tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+    .tab{padding:7px 16px;border-radius:8px;font-size:12px;font-weight:600;
+         cursor:pointer;border:1px solid var(--brd);background:var(--s1);color:var(--txt2);
+         transition:all .15s}
+    .tab:hover{border-color:var(--acc);color:var(--txt)}
+    .tab.active{background:var(--acc);border-color:var(--acc);color:#fff}
+    .tab.current::after{content:'← hoy';font-size:10px;margin-left:6px;opacity:.7}
+
+    /* ── layout ── */
+    .row{display:grid;gap:16px;margin-bottom:16px}
+    .row-week{grid-template-columns:1fr 220px 220px}
+    .row-month{grid-template-columns:1fr 1fr 1fr}
+    @media(max-width:1100px){.row-week{grid-template-columns:1fr}.row-month{grid-template-columns:1fr 1fr}}
+    @media(max-width:700px){.row-month{grid-template-columns:1fr}}
+
+    /* ── card ── */
+    .card{background:var(--s1);border:1px solid var(--brd);border-radius:14px;padding:20px}
+    .card-lbl{font-size:10px;font-weight:700;text-transform:uppercase;
+              letter-spacing:1.2px;color:var(--txt2);margin-bottom:14px}
+
+    /* ── week head ── */
+    .wk-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
+    .wk-title{font-size:20px;font-weight:800}
+    .wk-range{font-size:12px;color:var(--txt2);margin-top:3px}
+    .wk-big{text-align:right}
+    .wk-big-lbl{font-size:11px;color:var(--txt2)}
+    .wk-big-num{font-size:34px;font-weight:900;color:var(--acc);line-height:1;margin-top:2px}
+
+    /* ── day table ── */
+    table{width:100%;border-collapse:collapse}
+    th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;
+       color:var(--txt2);padding:7px 9px;text-align:right;border-bottom:1px solid var(--brd)}
+    th:first-child{text-align:left}
+    td{padding:10px 9px;font-size:13px;text-align:right;border-bottom:1px solid rgba(30,48,80,.55)}
+    td:first-child{text-align:left;font-weight:500}
+    tr.today td{background:rgba(79,142,247,.09)}
+    tr.today td:first-child{border-left:3px solid var(--acc);padding-left:6px}
+    tr.dash td{color:var(--txt2)}
+    tr.total-r td{font-weight:800;font-size:14px;border-top:1px solid var(--brd);border-bottom:none}
+    .z{color:var(--s3)}
+    .cg{color:var(--grn)} .ca{color:var(--acc)} .co{color:var(--amb)} .cp{color:var(--pur)}
+
+    .badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px}
+    .bm{background:rgba(79,142,247,.15);color:var(--acc)}
+    .bt{background:rgba(245,158,11,.15);color:var(--amb)}
+
+    /* ── provider / client lists ── */
+    .list-item{display:flex;align-items:center;gap:8px;
+               padding:8px 10px;background:var(--s2);border-radius:8px;margin-bottom:6px}
+    .li-rank{font-size:10px;color:var(--txt2);width:16px;flex-shrink:0}
+    .li-info{flex:1;min-width:0}
+    .li-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .li-bar-bg{height:3px;background:var(--brd);border-radius:2px;margin-top:4px}
+    .li-bar{height:3px;border-radius:2px}
+    .li-val{font-size:13px;font-weight:800;flex-shrink:0}
+    .li-sub{font-size:10px;color:var(--txt2);margin-top:2px}
+    .empty-msg{font-size:13px;color:var(--txt2);padding:8px 0}
+
+    /* ── summary ── */
+    .sum-row{display:flex;justify-content:space-between;align-items:center;
+             padding:10px 0;border-bottom:1px solid var(--brd)}
+    .sum-row:last-child{border-bottom:none}
+    .sum-lbl{font-size:13px;color:var(--txt2)}
+    .sum-val{font-size:15px;font-weight:700}
+
+    /* ── mini compare ── */
+    .cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+    .cmp{background:var(--s2);border-radius:10px;padding:12px 14px}
+    .cmp-lbl{font-size:11px;color:var(--txt2);margin-bottom:4px}
+    .cmp-val{font-size:18px;font-weight:800}
+    .cmp-d{font-size:11px;margin-top:3px}
+    .du{color:var(--grn)}.dd{color:var(--red)}.dn{color:var(--txt2)}
+
+    /* ── progress ── */
+    .prog-wrap{margin-top:16px}
+    .prog-info{display:flex;justify-content:space-between;font-size:11px;color:var(--txt2);margin-bottom:6px}
+    .prog-bg{height:6px;background:var(--brd);border-radius:3px}
+    .prog-fill{height:6px;background:linear-gradient(90deg,var(--acc),var(--grn));border-radius:3px;transition:width .6s}
+
+    /* ── section separators ── */
+    /* ── tooltips flotantes ── */
+    [data-tip]{position:relative}
+    [data-tip]::after{
+      content:attr(data-tip);
+      position:absolute;
+      bottom:calc(100% + 10px);
+      left:50%;
+      transform:translateX(-50%);
+      background:#0f0f1a;
+      border:1px solid rgba(255,255,255,.15);
+      color:rgba(255,255,255,.88);
+      padding:10px 14px;
+      border-radius:10px;
+      font-size:12px;
+      font-weight:400;
+      text-transform:none;
+      letter-spacing:normal;
+      white-space:pre-line;
+      max-width:270px;
+      line-height:1.6;
+      z-index:200;
+      box-shadow:0 8px 32px rgba(0,0,0,.55);
+      pointer-events:none;
+      opacity:0;
+      transition:opacity .15s ease;
+    }
+    [data-tip]:hover::after{opacity:1}
+    /* flecha del tooltip */
+    [data-tip]::before{
+      content:'';
+      position:absolute;
+      bottom:calc(100% + 4px);
+      left:50%;
+      transform:translateX(-50%);
+      border:6px solid transparent;
+      border-top-color:#0f0f1a;
+      z-index:201;
+      pointer-events:none;
+      opacity:0;
+      transition:opacity .15s ease;
+    }
+    [data-tip]:hover::before{opacity:1}
+
+    .sec-hdr{display:flex;align-items:center;gap:12px;margin:36px 0 16px}
+    .sec-hdr:first-of-type{margin-top:4px}
+    .sec-hdr-bar{width:3px;height:22px;border-radius:2px;flex-shrink:0}
+    .sec-hdr-lbl{font-size:11px;font-weight:800;text-transform:uppercase;
+                 letter-spacing:1.6px;color:var(--txt)}
+    .sec-hdr-line{flex:1;height:1px;background:var(--brd)}
+
+    /* ── two-column row (proveedores + clientes) ── */
+    .row-two{grid-template-columns:1fr 1fr}
+    @media(max-width:800px){.row-two{grid-template-columns:1fr}}
+
+    /* ── loading / error ── */
+    #app-status{display:flex;flex-direction:column;align-items:center;justify-content:center;
+                min-height:300px;color:var(--txt2);gap:12px}
+    .spinner{width:24px;height:24px;border:3px solid var(--brd);border-top-color:var(--acc);
+             border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .err-link{color:var(--acc);text-decoration:none}
+  </style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-l">
+    <h1>Envíos <span>Diarios</span></h1>
+    <div class="live"><div class="dot"></div>En vivo</div>
+  </div>
+  <div class="hdr-r">
+    <div class="date" id="hDate">—</div>
+    <div class="sub"  id="hSub">Cargando...</div>
+  </div>
+</div>
+
+<div style="display:flex;gap:8px;margin-bottom:16px" id="view-nav">
+  <div class="tab active" id="tab-ops"  onclick="switchView('ops')">📊 Operaciones</div>
+  <div class="tab"        id="tab-prov" onclick="switchView('prov')">🏪 Proveedores 2026</div>
+</div>
+
+<div id="app">
+  <div id="app-status"><div class="spinner"></div>Conectando con Google Sheets…</div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════
+const SHEET_ID   = '1Z5t3Evm5mcgnnbDr6SfbYSXc07GlXu4rVRte_lJc4_U';
+const SHEET_LINK = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/edit';
+
+// Exact column indices (A=0 … P=15)
+const C = {
+  DIA:0, MAN:1, TARD:2, ING:3, EGR:4, LTS:5,
+  // G(6) = separator
+  PROV:7, PROV_V:8, PROV_M:9,
+  // K(10) = separator
+  VGB1:11, VGB1_V:12,
+  // N(13) = separator
+  VGB2:14, VGB2_V:15
+};
+
+const MONTHS_SH = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO',
+                   'JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+const MONTHS_D  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DAY_LOW   = ['lunes','martes','miércoles','miercoles','jueves','viernes','sábado','sabado'];
+const DAY_LBL   = {lunes:'Lunes',martes:'Martes','miércoles':'Miércoles',miercoles:'Miércoles',
+                   jueves:'Jueves',viernes:'Viernes','sábado':'Sábado',sabado:'Sábado'};
+
+const HEADERS_SKIP = new Set(['v.g.b.','v.g.b','vgb','v.c.p.','v.c.p','l.r.','l.r',
+                               'total','subtotal','subt.','subt','ganancias','nafta','mantenimiento',
+                               'total viajes','proveed.','ventas','monto','viajes','dia']);
+
+// ── Chart config ──
+const ALL_MONTHS = [];
+for(let m=4;m<=11;m++) ALL_MONTHS.push({y:2024,m}); // Mayo–Dic 2024
+for(let m=0;m<=11;m++) ALL_MONTHS.push({y:2025,m}); // Ene–Dic 2025
+for(let m=0;m<=4; m++) ALL_MONTHS.push({y:2026,m}); // Ene–May 2026
+
+const PALETTE = [
+  '#f43f5e','#f97316','#eab308','#22c55e',
+  '#10b981','#06b6d4','#3b82f6','#6366f1',
+  '#8b5cf6','#ec4899','#a78bfa','#84cc16'
+]; // índice 0=Ene … 11=Dic
+
+let _chartYear = new Date().getFullYear();
+let _chartBars = [];
+let _chartRAF  = null;
+let _naftaPrices  = []; // [{year,monthIdx,price,monthLabel}]
+let _prov2026Data = null; // [{monthIdx, monthLabel, providers:[{name,v,m}]}]
+let _currentView  = 'ops';
+
+// Comisiones por proveedor (% sobre monto vendido)
+const PROV_COMM = {
+  'SR':        30,     // 30% sobre monto vendido
+  'Irigoyen':  5,
+  'Felipetti': 12.6,   // cascada: 1-(0.95×0.92)
+  'Contacto':  10,
+  'Pastrana':  10,
+  'Danil':     10,
+  'Pucho':     5,
+  'Boxes':     10,
+  'Oscar':     5,
+  'Cano':      5,
+};
+
+// Inflación mensual oficial Argentina — Fuente: INDEC
+// índice: 0=Ene … 11=Dic  |  null = dato no disponible
+const INFLATION = {
+  2024: [20.61,13.24,11.01,8.83,4.18,4.58,4.03,4.17,3.47,2.69,2.43,2.70],
+  2025: [2.21, 2.40, 3.73, 2.78,1.50,1.62,1.90,1.88,2.08,2.34,2.47,2.85],
+  2026: [2.88, 2.90, 3.38, null,null,null,null,null,null,null,null,null]
+};
+
+// ══════════════════════════════════════════════════════
+// GVIZ JSONP
+// ══════════════════════════════════════════════════════
+let _seq = 0;
+function gvizFetch(sheet) {
+  return new Promise((resolve, reject) => {
+    const cb = '_gv' + (++_seq);
+    const t  = setTimeout(() => { cleanup(); reject(new Error('Timeout: '+sheet)); }, 15000);
+    const sc = document.createElement('script');
+    function cleanup(){ clearTimeout(t); delete window[cb]; sc.remove(); }
+    window[cb] = d => { cleanup(); resolve(d); };
+    sc.onerror = () => { cleanup(); reject(new Error('No se cargó: '+sheet)); };
+    sc.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:${cb}&sheet=${encodeURIComponent(sheet)}`;
+    document.head.appendChild(sc);
+  });
+}
+
+function gvizRows(data) {
+  if (!data?.table?.rows) return [];
+  return data.table.rows.map(r =>
+    (r.c||[]).map(cell => cell ? (cell.v !== undefined ? cell.v : cell.f) : null)
+  );
+}
+
+// ══════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════
+function str(row, idx){ return String(row?.[idx] ?? '').trim(); }
+function num(row, idx){
+  const v = row?.[idx];
+  if(v === null || v === undefined) return 0;
+  if(typeof v === 'number') return v;
+  const s = String(v).replace(/[$\s]/g,'');
+  if(/^[\d.]+,\d+$/.test(s)) return parseFloat(s.replace(/\./g,'').replace(',','.'));
+  return parseFloat(s.replace(/,/g,'')) || 0;
+}
+function firstNum(row, from=1){
+  for(let i=from;i<row.length;i++){ const n=num(row,i); if(n>0) return n; }
+  return 0;
+}
+function isSkip(s){ return HEADERS_SKIP.has(s.toLowerCase().trim()); }
+function cap(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1).toLowerCase() : ''; }
+function fmtM(n){ return n ? '$'+Math.round(n).toLocaleString('es-AR') : '$0'; }
+function fmtV(n){ return n > 0 ? n.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'; }
+function fmtDate(d){
+  const ds=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  return `${ds[d.getDay()]} ${d.getDate()} de ${MONTHS_D[d.getMonth()]} ${d.getFullYear()}`;
+}
+function delta(cur,prev){
+  if(!prev) return null;
+  const p=((cur-prev)/prev*100), s=p>0?'+':'';
+  return {txt:s+p.toFixed(1)+'%', cls:p>0?'du':p<0?'dd':'dn'};
+}
+function sheetName(d){ return MONTHS_SH[d.getMonth()]+' '+String(d.getFullYear()).slice(-2); }
+function prevSheetName(d){
+  const p=new Date(d.getFullYear(),d.getMonth()-1,1); return sheetName(p);
+}
+function weekGanancia(wk){
+  if(wk.totalNet > 0) return wk.totalNet;
+  // subtIng (SUBTOTAL) ya incluye comisión; si caemos a nivel-día la sumamos manualmente
+  const ing = wk.subtIng
+    || (wk.days.reduce((s,d)=>s+(d.dash?0:d.ing||0),0) + (wk.commGan||0));
+  const egr = wk.nafta || wk.subtEgr || wk.days.reduce((s,d)=>s+(d.dash?0:d.egr||0),0);
+  return Math.max(0, ing - egr);
+}
+
+// ══════════════════════════════════════════════════════
+// PARSER
+// ══════════════════════════════════════════════════════
+function parseSheet(rows) {
+  const S = {
+    ingresos:0, egresos:0, ganancias:0, commGanancia:0, viajes:0, precioViaje:8500,
+    providers:[], clients:[]
+  };
+  const weeks = [];
+  let phase = 'summary'; // 'summary' | 'week'
+  let wk = null;
+
+  for(let i=0;i<rows.length;i++){
+    const row = rows[i];
+    if(!row) continue;
+
+    const a  = str(row, C.DIA);
+    const lo = a.toLowerCase();
+
+    // ── New SEMANA ──
+    if(lo.startsWith('semana') && !lo.includes('sub') && !lo.match(/total/)){
+      phase = 'week';
+      wk = { label:a, num: parseInt(a.replace(/\D/g,''))||weeks.length+1,
+             days:[], providers:[], clients:[] };
+      weeks.push(wk);
+      continue;
+    }
+
+    // ── Right-side data: providers & clients (in ANY section row) ──
+    const pn  = str(row, C.PROV);
+    const pv  = num(row, C.PROV_V);
+    const pm  = num(row, C.PROV_M);
+    const g1n = str(row, C.VGB1);
+    const g1v = num(row, C.VGB1_V);
+    const g2n = str(row, C.VGB2);
+    const g2v = num(row, C.VGB2_V);
+
+    const target = (phase === 'summary') ? S : wk;
+    if(target){
+      if(pn && !isSkip(pn))  target.providers.push({name:pn, v:pv, m:pm});
+      if(g1n && !isSkip(g1n)) target.clients.push({name:cap(g1n), v:g1v, group:1});
+      if(g2n && !isSkip(g2n)) target.clients.push({name:cap(g2n), v:g2v, group:2});
+    }
+
+    // ── Summary section ──
+    if(phase === 'summary'){
+      if(lo === 'ventas')          S.ingresos      = firstNum(row);
+      if(lo === 'ganancias')       S.commGanancia  = firstNum(row) || S.commGanancia;
+      if(lo === 'nafta')           S.egresos       = firstNum(row,2), S.lts = firstNum(row,4);
+      if(lo.includes('subtotal'))  S.ingresos      = firstNum(row)||S.ingresos,
+                                   S.egresos       = (()=>{ for(let j=2;j<row.length;j++){const n=num(row,j);if(n>0&&n!==S.ingresos)return n;}return S.egresos; })();
+      if(lo === 'total')           S.ganancias     = firstNum(row)||S.ganancias;
+      if(lo === 'viajes')          S.viajes     = num(row, C.EGR)||num(row, C.LTS)||S.viajes;
+      if(lo.includes('precio naf'))S.naftaPrice = firstNum(row);
+      if(lo.includes('precio via'))S.precioViaje= firstNum(row)||8500;
+      continue;
+    }
+
+    // ── Day row ──
+    if(wk && DAY_LOW.some(d => lo.startsWith(d))){
+      const isDash = String(row[C.MAN]??'').trim()==='-';
+      wk.days.push({
+        label: a,
+        man:   isDash ? null : num(row, C.MAN),
+        tard:  isDash ? null : num(row, C.TARD),
+        ing:   isDash ? null : num(row, C.ING),
+        egr:   isDash ? null : num(row, C.EGR),
+        lts:   isDash ? null : num(row, C.LTS),
+        dash:  isDash
+      });
+      continue;
+    }
+
+    // ── Week total rows ──
+    if(wk && lo === 'subtotal'){
+      wk.subtMan  = num(row, C.MAN);
+      wk.subtTard = num(row, C.TARD);
+      wk.subtIng  = num(row, C.ING);
+      wk.subtEgr  = num(row, C.EGR);
+    }
+    if(wk && lo === 'total'){
+      wk.totalV   = num(row, C.MAN);   // total viajes (sum of man+tard)
+      wk.totalNet = num(row, C.ING);   // net after fuel
+    }
+    if(wk && lo === 'nafta'){
+      wk.nafta    = num(row, C.EGR);
+      wk.nafta_lts= num(row, C.LTS);
+    }
+    if(wk && lo === 'ganancias'){
+      wk.commGan = num(row, C.ING);  // comisión semanal de proveedores (sin SR)
+    }
+  }
+
+  // Aggregate summary from weeks if summary extraction was partial
+  let tv=0, ti=0, tn=0;
+  for(const w of weeks){
+    for(const d of w.days){
+      if(d.dash) continue;
+      tv += (d.man||0)+(d.tard||0);
+      ti += (d.ing||0);
+      tn += (d.egr||0);
+    }
+  }
+  if(ti > S.ingresos) S.ingresos = ti;
+  S.viajes  = S.viajes  || tv;
+  S.egresos = S.egresos || tn;
+  S.ganancias = S.ganancias || (S.ingresos - S.egresos);
+
+  // Dedupe monthly clients
+  const cmap = {};
+  for(const c of S.clients){
+    if(cmap[c.name]) cmap[c.name].v += c.v;
+    else cmap[c.name] = {...c};
+  }
+  S.clients = Object.values(cmap).filter(c=>c.v>0).sort((a,b)=>b.v-a.v);
+
+  return { summary:S, weeks };
+}
+
+// ══════════════════════════════════════════════════════
+// WEEK SELECTION
+// ══════════════════════════════════════════════════════
+function currentWeekIdx(weeks, today){
+  let last = 0;
+  for(let i=0;i<weeks.length;i++){
+    const hasData = weeks[i].days.some(d=>!d.dash && ((d.man||0)+(d.tard||0))>0 || (d.ing||0)>0);
+    if(hasData) last = i;
+  }
+  return last;
+}
+
+function isTodayRow(label, today){
+  const d = today.getDate(), m = today.getMonth()+1;
+  // "lunes 4-5" → matches day=4, month=5
+  return new RegExp('\\b'+d+'[-/]'+m+'\\b').test(label);
+}
+
+// ══════════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════════
+let _activeWk = -1; // -1 = auto (current)
+let _lastData = null;
+let _today    = null;
+
+function renderAll(data, prevData, today){
+  _lastData = data; _today = today;
+  if(_activeWk < 0 || _activeWk >= data.weeks.length)
+    _activeWk = currentWeekIdx(data.weeks, today);
+  renderApp(data, prevData, today);
+}
+
+function renderApp(data, prevData, today){
+  if(_currentView !== 'ops') return; // leave providers view untouched
+  const { summary, weeks } = data;
+  const wi   = _activeWk;
+  const wk   = weeks[wi] || { label:'Sin datos', days:[], providers:[], clients:[] };
+  const prevM = prevData?.summary || null;
+
+  // ── Week aggregates ──
+  const wMan  = wk.days.reduce((s,d)=> s+(d.dash?0:(d.man||0)),  0);
+  const wTard = wk.days.reduce((s,d)=> s+(d.dash?0:(d.tard||0)), 0);
+  const wViaj = wMan+wTard;
+  const wIng  = wk.days.reduce((s,d)=> s+(d.dash?0:(d.ing||0)), 0);
+  const wEgr  = wk.nafta || wk.days.reduce((s,d)=> s+(d.dash?0:(d.egr||0)), 0);
+  const wGan  = wIng - wEgr;
+  const wLts  = wk.nafta_lts || wk.days.reduce((s,d)=> s+(d.dash?0:(d.lts||0)), 0);
+
+  // ── Prev week ──
+  const pwk      = wi > 0 ? weeks[wi-1] : null;
+  const pwViaj   = pwk ? pwk.days.reduce((s,d)=>s+(d.dash?0:(d.man||0)+(d.tard||0)),0) : 0;
+  const pwIng    = pwk ? pwk.days.reduce((s,d)=>s+(d.dash?0:(d.ing||0)),0) : 0;
+
+  // ── Ganancia neta total (transporte + proveedores) ──
+  const wkCommGan  = wk.commGan || 0;
+  const wTotalGan  = wGan + wkCommGan;          // ingresos − nafta + gan.prov
+  const pwGan      = pwk ? weekGanancia(pwk) : 0;
+
+  // ── Providers this week (sorted by monto) ──
+  const wkProvMap = {};
+  for(const p of wk.providers){ if(p.name&&!isSkip(p.name)){ const k=p.name; if(!wkProvMap[k]) wkProvMap[k]={name:p.name,v:0,m:0}; wkProvMap[k].v+=p.v; wkProvMap[k].m+=p.m; } }
+  const wkProvs = Object.values(wkProvMap).filter(p=>p.m>0||p.v>0).sort((a,b)=>b.m-a.m);
+  const maxPM   = wkProvs[0]?.m || 1;
+
+  // ── Clients this week (sorted by viajes) ──
+  const wkCliMap = {};
+  for(const c of wk.clients){ if(c.name&&!isSkip(c.name)){ if(!wkCliMap[c.name]) wkCliMap[c.name]={name:c.name,v:0}; wkCliMap[c.name].v+=c.v; } }
+  const wkClis  = Object.values(wkCliMap).filter(c=>c.v>0).sort((a,b)=>b.v-a.v);
+  const maxCV   = wkClis[0]?.v || 1;
+
+  // ── Day rows ──
+  const dayRows = wk.days.map(d => {
+    const isToday = isTodayRow(d.label, today);
+    const tot = (d.man||0)+(d.tard||0);
+    if(d.dash) return `<tr class="dash"><td>${d.label}</td><td colspan="5" style="text-align:center;color:var(--s3)">— feriado / semana anterior —</td></tr>`;
+    const z = v => v>0 ? '' : 'z';
+    return `<tr class="${isToday?'today':''}">
+      <td>${d.label}</td>
+      <td class="${z(d.man)} ca">${d.man>0?fmtV(d.man):'—'}</td>
+      <td class="${z(d.tard)} co">${d.tard>0?fmtV(d.tard):'—'}</td>
+      <td class="${z(tot)} ca">${tot>0?fmtV(tot):'—'}</td>
+      <td class="${z(d.ing)} cg">${d.ing>0?fmtM(d.ing):'—'}</td>
+      <td class="z" style="color:var(--s3)">—</td>
+    </tr>`;
+  }).join('');
+
+  // ── Mini stats ──
+  const dV   = delta(wViaj, pwViaj);
+  const dGan = delta(wTotalGan, pwGan);
+  const miniStats = (wViaj>0||wTotalGan>0) ? `
+    <div class="cmp-grid" style="margin-top:16px;grid-template-columns:1fr 1fr">
+      <div class="cmp">
+        <div class="cmp-lbl">Viajes esta semana</div>
+        <div class="cmp-val ca">${fmtV(wViaj)}</div>
+        ${dV?`<div class="cmp-d ${dV.cls}">${dV.txt} vs sem ant.</div>`:''}
+      </div>
+      <div class="cmp">
+        <div class="cmp-lbl">Ganancia neta — transp. + prov.</div>
+        <div class="cmp-val cg">${fmtM(wTotalGan)}</div>
+        ${dGan?`<div class="cmp-d ${dGan.cls}">${dGan.txt} vs sem ant.</div>`:''}
+      </div>
+      ${wEgr>0?`<div class="cmp">
+        <div class="cmp-lbl">⛽ Nafta</div>
+        <div class="cmp-val co">${fmtM(wEgr)}</div>
+        ${wLts>0?`<div class="cmp-d dn">${wLts.toFixed(2)} lts.</div>`:''}
+      </div>`:''}
+      ${wkCommGan>0?`<div class="cmp">
+        <div class="cmp-lbl">🏪 Gan. Proveedores</div>
+        <div class="cmp-val cp">${fmtM(wkCommGan)}</div>
+        <div class="cmp-d dn">${wIng>0?(wkCommGan/wIng*100).toFixed(1)+'% s/ingresos':''}</div>
+      </div>`:''}
+    </div>` : '';
+
+  // ── Provider list ──
+  const provList = wkProvs.length ? wkProvs.map((p,i)=>`
+    <div class="list-item">
+      <div class="li-rank">#${i+1}</div>
+      <div class="li-info">
+        <div class="li-name">${p.name}</div>
+        <div class="li-bar-bg"><div class="li-bar" style="width:${(p.m/maxPM*100).toFixed(0)}%;background:var(--pur)"></div></div>
+        ${p.v>0?`<div class="li-sub">${p.v} viaje${p.v!==1?'s':''}</div>`:''}
+      </div>
+      <div class="li-val cp">${fmtM(p.m)}</div>
+    </div>`).join('')
+    : `<div class="empty-msg">Sin movimientos esta semana.</div>`;
+
+  // ── Client list ──
+  const cliList = wkClis.length ? wkClis.map((c,i)=>`
+    <div class="list-item">
+      <div class="li-rank">#${i+1}</div>
+      <div class="li-info">
+        <div class="li-name">${c.name}</div>
+        <div class="li-bar-bg"><div class="li-bar" style="width:${(c.v/maxCV*100).toFixed(0)}%;background:var(--acc)"></div></div>
+      </div>
+      <div class="li-val ca">${fmtV(c.v)}</div>
+    </div>`).join('')
+    : `<div class="empty-msg">Sin pedidos esta semana.</div>`;
+
+  // ── Month summary ──
+  const dmI = delta(summary.ingresos, prevM?.ingresos);
+  const dmV = delta(summary.viajes,   prevM?.viajes);
+  const pct = weeks.length ? Math.min(100, (wi+1)/weeks.length*100) : 0;
+  const prevMonthLabel = MONTHS_D[today.getMonth()===0?11:today.getMonth()-1];
+
+  // ── Month clients ──
+  const maxMC = summary.clients[0]?.v || 1;
+  const monthCliList = summary.clients.length ? summary.clients.slice(0,16).map((c,i)=>`
+    <div class="list-item">
+      <div class="li-rank">#${i+1}</div>
+      <div class="li-info">
+        <div class="li-name">${c.name}</div>
+        <div class="li-bar-bg"><div class="li-bar" style="width:${(c.v/maxMC*100).toFixed(0)}%;background:var(--acc)"></div></div>
+      </div>
+      <div class="li-val ca">${fmtV(c.v)}</div>
+    </div>`).join('')
+    : `<div class="empty-msg">Sin datos.</div>`;
+
+  // ── Tabs ──
+  const tabs = weeks.map((w,i)=>{
+    const hasData = w.days.some(d=>!d.dash&&((d.man||0)+(d.tard||0))>0);
+    const isCur = i === currentWeekIdx(weeks, today);
+    return `<div class="tab${i===wi?' active':''}${isCur?' current':''}"
+                 onclick="_activeWk=${i};renderApp(_lastData,${prevM?'_prevData':'null'},_today)"
+                 title="Semana ${w.num}">${w.label}</div>`;
+  }).join('');
+
+  document.getElementById('app').innerHTML = `
+  <div class="tabs">${tabs}</div>
+
+  <!-- ══════════════════════════════════════════
+       📅  S E M A N A
+  ══════════════════════════════════════════ -->
+  <div class="sec-hdr">
+    <div class="sec-hdr-bar" style="background:var(--acc)"></div>
+    <span class="sec-hdr-lbl">📅 ${wk.label}</span>
+    <div class="sec-hdr-line"></div>
+  </div>
+
+  <!-- Tabla de días — ancho completo -->
+  <div class="row" style="margin-bottom:12px">
+    <div class="card">
+      <div class="wk-head">
+        <div>
+          <div class="card-lbl">Semana en Curso</div>
+          <div class="wk-title">${wk.label}</div>
+        </div>
+        <div class="wk-big">
+          <div class="wk-big-lbl">Total viajes</div>
+          <div class="wk-big-num">${wViaj>0?fmtV(wViaj):'—'}</div>
+        </div>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Día</th>
+          <th><span class="badge bm">Mañana</span></th>
+          <th><span class="badge bt">Tarde</span></th>
+          <th>Total</th><th>Ingresos</th><th>Gan. Prov.</th>
+        </tr></thead>
+        <tbody>
+          ${dayRows}
+          <tr class="total-r">
+            <td>TOTAL</td>
+            <td class="${wMan>0?'ca':'z'}">${wMan>0?fmtV(wMan):'—'}</td>
+            <td class="${wTard>0?'co':'z'}">${wTard>0?fmtV(wTard):'—'}</td>
+            <td class="${wViaj>0?'ca':'z'}">${wViaj>0?fmtV(wViaj):'—'}</td>
+            <td class="${wIng>0?'cg':'z'}">${wIng>0?fmtM(wIng):'—'}</td>
+            <td class="${wkCommGan>0?'cp':'z'}">${wkCommGan>0?fmtM(wkCommGan):'—'}</td>
+          </tr>
+        </tbody>
+      </table>
+      ${miniStats}
+    </div>
+  </div>
+
+  <!-- Proveedores + Clientes en dos columnas -->
+  <div class="row row-two">
+    <div class="card">
+      <div class="card-lbl">Proveedores — ${wk.label}</div>
+      ${provList}
+    </div>
+    <div class="card">
+      <div class="card-lbl">Clientes / Gestores — ${wk.label}</div>
+      ${cliList}
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       📆  M E S
+  ══════════════════════════════════════════ -->
+  <div class="sec-hdr">
+    <div class="sec-hdr-bar" style="background:var(--grn)"></div>
+    <span class="sec-hdr-lbl">📆 ${MONTHS_D[today.getMonth()]} ${today.getFullYear()}</span>
+    <div class="sec-hdr-line"></div>
+  </div>
+
+  <div class="row row-month">
+    <!-- Resumen mes -->
+    <div class="card">
+      <div class="card-lbl">Resumen del Mes</div>
+      <div class="sum-row"><span class="sum-lbl">Ingresos</span><span class="sum-val cg">${fmtM(summary.ingresos)}</span></div>
+      <div class="sum-row"><span class="sum-lbl">Nafta</span><span class="sum-val co">${fmtM(summary.egresos)}</span></div>
+      ${summary.commGanancia>0?`<div class="sum-row"><span class="sum-lbl">Gan. Proveedores</span><span class="sum-val cp">${fmtM(summary.commGanancia)}</span></div>`:''}
+      <div class="sum-row"><span class="sum-lbl">Ganancia neta</span><span class="sum-val cg">${fmtM(summary.ganancias)}</span></div>
+      <div class="sum-row"><span class="sum-lbl">Total viajes</span><span class="sum-val ca">${fmtV(summary.viajes)}</span></div>
+      <div class="sum-row"><span class="sum-lbl">Precio / viaje</span><span class="sum-val">${fmtM(summary.precioViaje)}</span></div>
+      <div class="prog-wrap">
+        <div class="prog-info"><span>Avance del mes</span><span>Semana ${wi+1} de ${weeks.length}</span></div>
+        <div class="prog-bg"><div class="prog-fill" style="width:${pct.toFixed(0)}%"></div></div>
+      </div>
+    </div>
+
+    <!-- vs mes anterior -->
+    <div class="card">
+      <div class="card-lbl">vs. ${prevMonthLabel}</div>
+      <div class="cmp-grid">
+        <div class="cmp"><div class="cmp-lbl">Ingresos</div>
+          <div class="cmp-val cg">${fmtM(summary.ingresos)}</div>
+          ${dmI?`<div class="cmp-d ${dmI.cls}">${dmI.txt}</div>`:'<div class="cmp-d dn">—</div>'}
+          ${prevM?`<div style="font-size:11px;color:var(--txt2);margin-top:4px">ant: ${fmtM(prevM.ingresos)}</div>`:''}
+        </div>
+        <div class="cmp"><div class="cmp-lbl">Viajes</div>
+          <div class="cmp-val ca">${fmtV(summary.viajes)}</div>
+          ${dmV?`<div class="cmp-d ${dmV.cls}">${dmV.txt}</div>`:'<div class="cmp-d dn">—</div>'}
+          ${prevM?`<div style="font-size:11px;color:var(--txt2);margin-top:4px">ant: ${fmtV(prevM.viajes)}</div>`:''}
+        </div>
+      </div>
+      ${prevM?`<div style="margin-top:12px"><div class="cmp-grid">
+          <div class="cmp"><div class="cmp-lbl">Ganancia</div>
+            <div class="cmp-val cg">${fmtM(summary.ganancias)}</div>
+            ${delta(summary.ganancias,prevM.ganancias)?`<div class="cmp-d ${delta(summary.ganancias,prevM.ganancias).cls}">${delta(summary.ganancias,prevM.ganancias).txt}</div>`:''}
+          </div>
+          <div class="cmp"><div class="cmp-lbl">Nafta</div>
+            <div class="cmp-val co">${fmtM(summary.egresos)}</div>
+            ${delta(summary.egresos,prevM.egresos)?`<div class="cmp-d ${delta(summary.egresos,prevM.egresos).cls}">${delta(summary.egresos,prevM.egresos).txt}</div>`:''}
+          </div>
+        </div></div>`:''}
+    </div>
+
+    <!-- Clientes mes -->
+    <div class="card">
+      <div class="card-lbl">Clientes / Gestores — Mes completo</div>
+      ${monthCliList}
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       📊  A Ñ O
+  ══════════════════════════════════════════ -->
+  <div class="sec-hdr">
+    <div class="sec-hdr-bar" style="background:var(--pur)"></div>
+    <span class="sec-hdr-lbl">📊 Comparativa Anual</span>
+    <div class="sec-hdr-line"></div>
+  </div>
+
+  <div class="card" id="annual-chart-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="card-lbl" style="margin-bottom:0">Ganancias por Semana</div>
+      <div style="display:flex;gap:6px" id="year-btns">
+        ${[2024,2025,2026].map(y=>`<div class="tab${y===_chartYear?' active':''}" style="cursor:pointer" onclick="setChartYear(${y})">${y}</div>`).join('')}
+      </div>
+    </div>
+    <div id="chart-legend" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
+    <div style="position:relative">
+      <canvas id="annual-chart" height="320" style="width:100%;display:block;cursor:crosshair"></canvas>
+    </div>
+    <div id="chart-status" style="text-align:center;color:var(--txt2);font-size:13px;padding:40px 0">
+      <div class="spinner" style="margin:0 auto 12px"></div>Cargando datos históricos…
+    </div>
+  </div>
+  <div id="chart-tooltip" style="position:fixed;display:none;background:#1d2d42;border:1px solid #243550;
+       border-radius:10px;padding:11px 15px;font-size:12px;pointer-events:none;z-index:9999;min-width:170px;
+       box-shadow:0 8px 24px rgba(0,0,0,.5)"></div>
+  `;
+
+  // Cargar datos del gráfico una sola vez; re-adjuntar si ya existen
+  if(!window._chartLoaded){ window._chartLoaded = true; loadAllMonths(); }
+  else if(_chartBars.length){ renderChart(_chartBars); }
+}
+
+// ══════════════════════════════════════════════════════
+// ANNUAL CHART
+// ══════════════════════════════════════════════════════
+
+function setChartYear(year){
+  _chartYear = year;
+  document.querySelectorAll('#year-btns .tab').forEach(b=>{
+    const y = parseInt(b.textContent);
+    b.classList.toggle('active', y === year);
+  });
+  if(_chartBars.length) renderChart(_chartBars);
+}
+
+async function loadAllMonths(){
+  _naftaPrices = [];
+  const results = await Promise.allSettled(
+    ALL_MONTHS.map(({y,m}) => gvizFetch(MONTHS_SH[m]+' '+String(y).slice(-2)))
+  );
+
+  const bars = [];
+  results.forEach(({status,value}, i) => {
+    if(status !== 'fulfilled') return;
+    const {y, m} = ALL_MONTHS[i];
+    const rows = gvizRows(value);
+    const {summary, weeks} = parseSheet(rows);
+    if(summary.naftaPrice > 0)
+      _naftaPrices.push({year:y, monthIdx:m, price:summary.naftaPrice, monthLabel:MONTHS_D[m]});
+    // ganancia = totalNet (fila TOTAL ya incluye comisión semanal); commGan para el tooltip
+    weeks.forEach(wk => {
+      const gan     = weekGanancia(wk);
+      const commGan = wk.commGan || 0;
+      const baseGan = Math.max(0, gan - commGan);
+      if(gan > 0) bars.push({
+        monthIdx:   m,
+        year:       y,
+        weekNum:    wk.num,
+        ganancia:   gan,
+        baseGan,
+        commShare:  commGan,   // mantenido para compatibilidad con tooltip
+        monthLabel: MONTHS_D[m],
+        weekLabel:  wk.label || ('Semana '+wk.num),
+        color:      PALETTE[m]
+      });
+    });
+
+    // Recopilar datos de proveedores 2026
+    if(y === 2026 && summary.providers.length){
+      if(!_prov2026Data) _prov2026Data = [];
+      _prov2026Data.push({
+        monthIdx: m, monthLabel: MONTHS_D[m],
+        providers: [...summary.providers],
+        commGanancia: summary.commGanancia || 0   // ganancia real D5 del mes
+      });
+    }
+  });
+
+  // Sort chronologically
+  bars.sort((a,b) => a.year!==b.year ? a.year-b.year : a.monthIdx!==b.monthIdx ? a.monthIdx-b.monthIdx : a.weekNum-b.weekNum);
+  _chartBars = bars;
+
+  // If user is already on the providers tab, populate it now
+  if(_currentView === 'prov') renderProveedoresView();
+  renderChart(bars);
+}
+
+function renderChart(bars){
+  const statusEl  = document.getElementById('chart-status');
+  const legendEl  = document.getElementById('chart-legend');
+  const canvas    = document.getElementById('annual-chart');
+  if(!canvas) return;
+
+  const yearBars = bars.filter(b => b.year === _chartYear);
+
+  if(statusEl) statusEl.style.display = yearBars.length ? 'none' : 'block';
+  if(!yearBars.length){ if(statusEl) statusEl.innerHTML = 'Sin datos para '+_chartYear; return; }
+
+  // ── Estadísticas para el tooltip ──
+  const yearMean  = yearBars.reduce((s,b)=>s+b.ganancia,0) / yearBars.length;
+  const bestGan   = Math.max(...yearBars.map(b=>b.ganancia));
+  const prevYBars = bars.filter(b=>b.year === _chartYear - 1);
+  const prevYMean = prevYBars.length ? prevYBars.reduce((s,b)=>s+b.ganancia,0)/prevYBars.length : null;
+
+  // Legend
+  if(legendEl){
+    const months = [...new Map(yearBars.map(b=>[b.monthIdx, b])).values()];
+    legendEl.innerHTML = months.map(b=>`
+      <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--txt2)">
+        <div style="width:10px;height:10px;border-radius:3px;background:${b.color};flex-shrink:0"></div>
+        ${b.monthLabel}
+      </div>`).join('')
+    + `<div style="width:1px;background:var(--brd);margin:0 6px"></div>
+       <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--txt2)">
+         <div style="width:16px;height:2.5px;background:#f97316;border-radius:2px;flex-shrink:0"></div>
+         Precio nafta
+       </div>
+       <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--txt2)">
+         <div style="width:16px;height:2.5px;background:#ef4444;border-radius:2px;flex-shrink:0"></div>
+         Inflación mensual
+       </div>`;
+  }
+
+  // Setup canvas (DPR-aware)
+  const dpr = window.devicePixelRatio || 1;
+  const W   = canvas.offsetWidth;
+  const H   = 320;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  // Bar layout
+  const PAD = {top:40, right:20, bottom:72, left:78};
+  const chartW = W - PAD.left - PAD.right;
+  const chartH = H - PAD.top  - PAD.bottom;
+  const n      = yearBars.length;
+  const gap    = 3;   // gap between bars within a month
+  const mgap   = 10;  // extra gap between months
+
+  // Count month boundaries
+  let monthCount = 1;
+  for(let i=1;i<n;i++) if(yearBars[i].monthIdx !== yearBars[i-1].monthIdx) monthCount++;
+
+  const totalGaps = (n-1)*gap + (monthCount-1)*mgap;
+  const barW      = Math.max(4, (chartW - totalGaps) / n);
+
+  // Pre-compute bar X positions + max value
+  const barsX = [];
+  let curX = PAD.left;
+  const maxGan = Math.max(...yearBars.map(b=>b.ganancia));
+
+  for(let i=0;i<n;i++){
+    if(i>0){
+      curX += gap;
+      if(yearBars[i].monthIdx !== yearBars[i-1].monthIdx) curX += mgap;
+    }
+    barsX.push(curX);
+    curX += barW;
+  }
+
+  // ── Centro X de cada mes ──
+  const monthCX = {};
+  for(let i=0;i<n;i++){
+    const mi = yearBars[i].monthIdx;
+    if(!monthCX[mi]) monthCX[mi] = [];
+    monthCX[mi].push(barsX[i] + barW/2);
+  }
+  const monthKeys = Object.keys(monthCX).map(Number).sort((a,b)=>a-b);
+  const mCenterOf = mi => monthCX[mi] ? monthCX[mi].reduce((s,x)=>s+x,0)/monthCX[mi].length : null;
+
+  // ── Línea: precio nafta ──
+  const yearNafta  = _naftaPrices.filter(p=>p.year===_chartYear).sort((a,b)=>a.monthIdx-b.monthIdx);
+  const naftaPts   = monthKeys.map(mi=>({monthIdx:mi, price:yearNafta.find(p=>p.monthIdx===mi)?.price??null, x:mCenterOf(mi)}));
+  const naftaValid = naftaPts.filter(p=>p.price!==null).map(p=>p.price);
+  const nMin=Math.min(...naftaValid), nMax=Math.max(...naftaValid), nRange=nMax-nMin||1;
+  const naftaNorm  = naftaPts.map(p=>({...p, yn:p.price===null?null:chartH*(1-((p.price-nMin)/nRange*0.72+0.14))}));
+
+  // ── Línea: inflación mensual (INDEC) ──
+  const inflData   = INFLATION[_chartYear] || [];
+  const inflPts    = monthKeys.map(mi=>({monthIdx:mi, pct:inflData[mi]??null, x:mCenterOf(mi)}));
+  const inflValid  = inflPts.filter(p=>p.pct!==null).map(p=>p.pct);
+  const iMin=Math.min(...inflValid), iMax=Math.max(...inflValid), iRange=iMax-iMin||1;
+  const inflNorm   = inflPts.map(p=>({...p, yn:p.pct===null?null:chartH*(1-((p.pct-iMin)/iRange*0.72+0.14))}));
+
+  // ── Helper: dibujar una línea con puntos ──
+  function drawOverlay(ctx, pts, color, dashPat){
+    const valid = pts.filter(p=>p.yn!==null);
+    if(valid.length < 2) return;
+    ctx.save();
+    ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+    ctx.setLineDash(dashPat); ctx.globalAlpha = 0.95;
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.beginPath();
+    let first = true;
+    for(const p of pts){
+      if(p.yn===null) continue;
+      const y = PAD.top + p.yn;
+      first ? (ctx.moveTo(p.x,y),first=false) : ctx.lineTo(p.x,y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+    for(const p of pts){
+      if(p.yn===null) continue;
+      const y = PAD.top + p.yn;
+      ctx.beginPath(); ctx.arc(p.x,y,4,0,Math.PI*2);
+      ctx.fillStyle = color; ctx.fill();
+      ctx.strokeStyle = '#0c1523'; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // State
+  let hoveredMonth = null;
+
+  function draw(hMonth){
+    ctx.clearRect(0, 0, W, H);
+
+    // ── Y axis ──
+    const yTicks = 5;
+    ctx.font = '11px Segoe UI, system-ui, sans-serif';
+    ctx.fillStyle = '#6b82a0';
+    ctx.textAlign = 'right';
+    ctx.strokeStyle = '#1e3050';
+    ctx.lineWidth = 1;
+
+    for(let i=0;i<=yTicks;i++){
+      const v    = (maxGan / yTicks) * i;
+      const y    = PAD.top + chartH - (chartH * i / yTicks);
+      const lbl  = v >= 1e6 ? '$'+(v/1e6).toFixed(1)+'M'
+                 : v >= 1e3 ? '$'+(v/1e3).toFixed(0)+'k' : '$'+Math.round(v);
+      ctx.fillText(lbl, PAD.left - 8, y + 4);
+      if(i > 0){
+        ctx.beginPath();
+        ctx.moveTo(PAD.left, y);
+        ctx.lineTo(PAD.left + chartW, y);
+        ctx.stroke();
+      }
+    }
+
+    // ── Bars ──
+    for(let i=0;i<n;i++){
+      const b    = yearBars[i];
+      const x    = barsX[i];
+      const barH = (b.ganancia / maxGan) * chartH;
+      const y    = PAD.top + chartH - barH;
+
+      const isHov     = b.monthIdx === hMonth;
+      const dimmed    = hMonth !== null && !isHov;
+      const alpha     = dimmed ? 0.25 : 1;
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+
+      // Bar shadow on hover
+      if(isHov){
+        ctx.shadowColor = b.color + '88';
+        ctx.shadowBlur  = 8;
+      }
+
+      // Rounded top
+      const r = Math.min(4, barW / 2);
+      ctx.fillStyle = b.color;
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + barW - r, y);
+      ctx.quadraticCurveTo(x + barW, y, x + barW, y + r);
+      ctx.lineTo(x + barW, y + barH);
+      ctx.lineTo(x, y + barH);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // ── Overlay: líneas de nafta e inflación ──
+    drawOverlay(ctx, naftaNorm, '#f97316', [7,4]);
+    drawOverlay(ctx, inflNorm,  '#ef4444', [4,4]);
+
+    // ── X axis: month labels ──
+    ctx.fillStyle = '#6b82a0';
+    ctx.font = 'bold 11px Segoe UI, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+
+    let lastM = null;
+    for(let i=0;i<n;i++){
+      const b = yearBars[i];
+      if(b.monthIdx !== lastM){
+        // Find the center of all bars in this month
+        const mBars = barsX.filter((_,j)=>yearBars[j].monthIdx===b.monthIdx);
+        const cx    = mBars.reduce((s,x)=>s+x,0)/mBars.length + barW/2;
+        const isHov = b.monthIdx === hMonth;
+        ctx.fillStyle = isHov ? b.color : '#6b82a0';
+        ctx.fillText(b.monthLabel.slice(0,3).toUpperCase(), cx, PAD.top + chartH + 12);
+        lastM = b.monthIdx;
+      }
+    }
+
+    // ── Axis line ──
+    ctx.strokeStyle = '#1e3050';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(PAD.left, PAD.top + chartH);
+    ctx.lineTo(PAD.left + chartW, PAD.top + chartH);
+    ctx.stroke();
+  }
+
+  // Initial draw
+  draw(null);
+
+  // ── Hit detection ──
+  function findBar(mx, my){
+    for(let i=0;i<n;i++){
+      const b    = yearBars[i];
+      const x    = barsX[i];
+      const barH = (b.ganancia / maxGan) * chartH;
+      const y    = PAD.top + chartH - barH;
+      if(mx >= x && mx <= x + barW && my >= y && my <= PAD.top + chartH) return b;
+    }
+    return null;
+  }
+
+  // ── Tooltip ──
+  const tooltip = document.getElementById('chart-tooltip');
+  function statRow(label, pct, isBest){
+    if(isBest) return `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:7px;padding-top:7px;border-top:1px solid #243550">
+        <span style="color:#6b82a0;font-size:11px">${label}</span>
+        <span style="font-weight:700;font-size:12px;color:#f59e0b">🏆 mejor semana</span>
+      </div>`;
+    if(pct === null) return '';
+    const up    = pct >= 0;
+    const sign  = up ? '+' : '';
+    const color = up ? '#22c55e' : '#ef4444';
+    const arrow = up ? '▲' : '▼';
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:7px;padding-top:7px;border-top:1px solid #243550">
+        <span style="color:#6b82a0;font-size:11px">${label}</span>
+        <span style="font-weight:700;font-size:12px;color:${color}">${arrow} ${sign}${Math.abs(pct).toFixed(1)}%</span>
+      </div>`;
+  }
+
+  function showTip(e, b){
+    if(!b || !tooltip){ hideTip(); return; }
+
+    const vsMedia    = yearMean  ? (b.ganancia - yearMean)  / yearMean  * 100 : null;
+    const vsPrevYear = prevYMean ? (b.ganancia - prevYMean) / prevYMean * 100 : null;
+    const isBest     = b.ganancia === bestGan;
+    const pctOfBest  = isBest ? null : (b.ganancia / bestGan - 1) * 100;
+
+    // Datos de líneas para el mes hovereado
+    const naftaM = naftaPts.find(p=>p.monthIdx===b.monthIdx);
+    const inflM  = inflPts.find(p=>p.monthIdx===b.monthIdx);
+
+    const sepLine = `<div style="border-top:1px solid #243550;margin:8px 0"></div>`;
+
+    // Desglose ganancia: transporte + comisión
+    const hasComm = (b.commShare||0) > 0;
+    const commPct = b.ganancia > 0 ? (b.commShare / b.ganancia * 100) : 0;
+
+    tooltip.innerHTML = `
+      <div style="font-size:10px;font-weight:700;color:#6b82a0;margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px">
+        ${b.weekLabel} &mdash; ${b.monthLabel} ${b.year}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:${hasComm?2:4}px">
+        <div style="width:10px;height:10px;border-radius:3px;background:${b.color};flex-shrink:0"></div>
+        <span style="font-size:20px;font-weight:900;color:#e8edf5">${fmtM(b.ganancia)}</span>
+      </div>
+      ${hasComm?`
+      <div style="display:flex;justify-content:space-between;gap:12px;font-size:11px;margin-bottom:6px;color:#6b82a0">
+        <span>🚚 Transporte <span style="color:#e8edf5;font-weight:600">${fmtM(b.baseGan||0)}</span></span>
+        <span>🏪 Comisiones <span style="color:#a78bfa;font-weight:600">${fmtM(b.commShare)}</span> <span style="opacity:.65">(${commPct.toFixed(0)}%)</span></span>
+      </div>`:''}
+      ${statRow('vs. media del año', vsMedia, false)}
+      ${prevYMean ? statRow('vs. media '+ (_chartYear-1), vsPrevYear, false) : ''}
+      ${statRow('vs. mejor semana del año', isBest ? 0 : pctOfBest, isBest)}
+      ${(naftaM?.price||inflM?.pct) ? sepLine : ''}
+      ${naftaM?.price ? `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+          <span style="display:flex;align-items:center;gap:5px;color:#6b82a0;font-size:11px">
+            <span style="display:inline-block;width:10px;height:2.5px;background:#f97316;border-radius:1px"></span>
+            Precio nafta
+          </span>
+          <span style="font-weight:700;color:#f97316;font-size:12px">$${naftaM.price.toLocaleString('es-AR')}/lt</span>
+        </div>` : ''}
+      ${inflM?.pct!=null ? `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px">
+          <span style="display:flex;align-items:center;gap:5px;color:#6b82a0;font-size:11px">
+            <span style="display:inline-block;width:10px;height:2.5px;background:#ef4444;border-radius:1px"></span>
+            Inflación del mes
+          </span>
+          <span style="font-weight:700;color:#ef4444;font-size:12px">${inflM.pct.toFixed(2)}%</span>
+        </div>` : ''}
+    `;
+    tooltip.style.display = 'block';
+    positionTip(e);
+  }
+  function positionTip(e){
+    if(!tooltip) return;
+    const tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+    let lx = e.clientX + 16, ly = e.clientY - 10;
+    if(lx + tw > window.innerWidth  - 10) lx = e.clientX - tw - 16;
+    if(ly + th > window.innerHeight - 10) ly = e.clientY - th - 10;
+    tooltip.style.left = lx + 'px';
+    tooltip.style.top  = ly + 'px';
+  }
+  function hideTip(){ if(tooltip) tooltip.style.display = 'none'; }
+
+  // ── Mouse events ──
+  canvas.onmousemove = e => {
+    const rect = canvas.getBoundingClientRect();
+    const mx   = e.clientX - rect.left;
+    const my   = e.clientY - rect.top;
+    const hit  = findBar(mx, my);
+    const newM = hit ? hit.monthIdx : null;
+    if(newM !== hoveredMonth){
+      hoveredMonth = newM;
+      if(_chartRAF) cancelAnimationFrame(_chartRAF);
+      _chartRAF = requestAnimationFrame(() => draw(hoveredMonth));
+    }
+    showTip(e, hit);
+  };
+  canvas.onmouseleave = () => {
+    hoveredMonth = null;
+    hideTip();
+    if(_chartRAF) cancelAnimationFrame(_chartRAF);
+    _chartRAF = requestAnimationFrame(() => draw(null));
+  };
+
+  // ── Resize ──
+  if(!canvas._resizeObs){
+    canvas._resizeObs = new ResizeObserver(() => renderChart(_chartBars));
+    canvas._resizeObs.observe(canvas);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// PROVEEDORES 2026
+// ══════════════════════════════════════════════════════
+
+function switchView(view){
+  _currentView = view;
+  document.querySelectorAll('#view-nav .tab').forEach(t => t.classList.remove('active'));
+  const tb = document.getElementById('tab-' + view);
+  if(tb) tb.classList.add('active');
+  if(view === 'ops'){
+    if(_lastData) renderApp(_lastData, _prevData, TODAY);
+    else {
+      const app = document.getElementById('app');
+      if(app) app.innerHTML = '<div id="app-status"><div class="spinner"></div>Cargando…</div>';
+    }
+    // Re-attach chart if already loaded
+    if(_chartBars.length) renderChart(_chartBars);
+  } else if(view === 'prov'){
+    renderProveedoresView();
+  }
+}
+
+function renderProveedoresView(){
+  const app = document.getElementById('app');
+  if(!app) return;
+  if(!_prov2026Data){
+    app.innerHTML = `<div id="app-status">
+      <div class="spinner"></div>Cargando datos de proveedores…
+      <div style="font-size:12px;color:var(--txt2);margin-top:6px">Esperando carga histórica</div>
+    </div>`;
+    return;
+  }
+  app.innerHTML = renderProveedoresHTML(_prov2026Data);
+  drawProvChart(_prov2026Data);
+  // Re-draw on resize
+  const pc = document.getElementById('prov-chart');
+  if(pc && !pc._resizeObs){
+    pc._resizeObs = new ResizeObserver(()=>drawProvChart(_prov2026Data));
+    pc._resizeObs.observe(pc);
+  }
+}
+
+function renderProveedoresHTML(monthsData){
+  // Sort months chronologically
+  const sorted = [...monthsData].sort((a,b)=>a.monthIdx-b.monthIdx);
+  const availMonths = sorted.map(m=>m.monthIdx);
+
+  // Aggregate: provKey -> {name, comm, months:{mIdx:monto}, totalV, totalM, ganancia}
+  const provMap = {};
+  for(const {monthIdx, providers} of sorted){
+    // Deduplicate within a month first
+    const seen = {};
+    for(const p of providers){
+      const key = p.name.toLowerCase().trim();
+      if(!seen[key]) seen[key] = {name:p.name, v:0, m:0};
+      seen[key].v += (p.v||0);
+      seen[key].m += (p.m||0);
+    }
+    for(const [key, pd] of Object.entries(seen)){
+      if(!provMap[key]) provMap[key] = {name:pd.name, months:{}, totalV:0, totalM:0};
+      provMap[key].months[monthIdx] = (provMap[key].months[monthIdx]||0) + pd.m;
+      provMap[key].totalV += pd.v;
+      provMap[key].totalM += pd.m;
+    }
+  }
+
+  // Attach commission and compute ganancia
+  let provs = Object.values(provMap).filter(p=>p.totalM>0).map(p=>{
+    const ck = Object.keys(PROV_COMM).find(k=>k.toLowerCase()===p.name.toLowerCase().trim());
+    const comm = ck ? PROV_COMM[ck] : 0;
+    return {...p, comm, ganancia: p.totalM * comm / 100};
+  });
+  provs.sort((a,b)=>b.totalM - a.totalM);
+
+  const totalM       = provs.reduce((s,p)=>s+p.totalM, 0);
+  const totalG       = provs.reduce((s,p)=>s+p.ganancia, 0);   // teórico (PROV_COMM %)
+  const totalActComm = sorted.reduce((s,md)=>s+(md.commGanancia||0), 0); // real D5
+
+  const mHeaders = availMonths.map(m=>`<th>${MONTHS_D[m].slice(0,3).toUpperCase()}</th>`).join('');
+
+  const rows = provs.map(p=>{
+    const mCells = availMonths.map(m=>{
+      const v = p.months[m]||0;
+      return `<td class="${v>0?'':'z'}">${v>0?fmtM(v):'—'}</td>`;
+    }).join('');
+    return `<tr>
+      <td style="font-weight:600">${p.name}</td>
+      <td style="text-align:center;${p.comm>0?'color:var(--pur);font-weight:700':'color:var(--txt2)'}">
+        ${p.comm>0?p.comm+'%':'—'}
+      </td>
+      ${mCells}
+      <td style="font-weight:700;color:var(--acc)">${fmtM(p.totalM)}</td>
+      <td style="font-weight:700;${p.ganancia>0?'color:var(--grn)':'color:var(--txt2)'}">
+        ${p.ganancia>0?fmtM(p.ganancia):'—'}
+      </td>
+    </tr>`;
+  }).join('');
+
+  const totalRowCells = availMonths.map(m=>{
+    const mv = provs.reduce((s,p)=>s+(p.months[m]||0),0);
+    return `<td style="font-weight:800;color:var(--acc)">${mv>0?fmtM(mv):'—'}</td>`;
+  }).join('');
+
+  const topProv      = provs[0];
+  const effPct       = totalM > 0 ? (totalActComm / totalM * 100) : 0;
+  const numWeeks     = sorted.reduce((s,md)=>{
+    // estimate 4-5 weeks per month from _chartBars if available
+    const mb = _chartBars.filter(b=>b.year===2026&&b.monthIdx===md.monthIdx);
+    return s + (mb.length || 4);
+  }, 0);
+  const avgWkGan     = numWeeks > 0
+    ? (_chartBars.filter(b=>b.year===2026).reduce((s,b)=>s+b.ganancia,0) / numWeeks) : 0;
+  const avgWkMonto   = numWeeks > 0 ? (totalM / numWeeks) : 0;
+  const avgWkPct     = avgWkMonto > 0 ? (avgWkGan / avgWkMonto * 100) : 0;
+
+  return `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px">
+      <div class="card" data-tip="Suma total del monto de todas las facturas\no remitos de proveedores en el año.\nNo incluye lo que se cobra a SR.\nRefleja el volumen de mercadería\nque pasó por la empresa en 2026.">
+        <div class="card-lbl">Total movido proveedores — 2026</div>
+        <div style="font-size:22px;font-weight:900;color:var(--acc)">${fmtM(totalM)}</div>
+        <div style="font-size:12px;color:var(--txt2);margin-top:5px">${provs.length} proveedores activos</div>
+      </div>
+      <div class="card" data-tip="Ganancia real registrada en la planilla\n(fila D5 "GANANCIAS" de cada mes).\nEs lo que efectivamente cobró la empresa\ncomo comisión por venderle a los proveedores.\nEl % teórico se calcula con la tabla de comisiones\npor proveedor y puede diferir del real.">
+        <div class="card-lbl">Ganancia real comisiones (D5) — 2026</div>
+        <div style="font-size:22px;font-weight:900;color:var(--grn)">${fmtM(totalActComm)}</div>
+        <div style="font-size:12px;color:var(--txt2);margin-top:5px">
+          ${effPct.toFixed(1)}% efectivo sobre MONTO
+          ${totalG>0?`<span style="opacity:.6"> · teórico ${fmtM(totalG)}</span>`:''}
+        </div>
+      </div>
+      <div class="card" data-tip="Relación entre la ganancia de transporte\n(viajes - nafta) y el monto total vendido\na proveedores en cada semana.\nIndica qué % del volumen de proveedores\nse convierte en ganancia neta de la empresa.\nA mayor %, mayor eficiencia operativa.">
+        <div class="card-lbl">% Ganancia prom. semanal s/MONTO</div>
+        <div style="font-size:22px;font-weight:900;color:var(--amb)">${avgWkPct.toFixed(1)}%</div>
+        <div style="font-size:12px;color:var(--txt2);margin-top:5px">
+          ${fmtM(Math.round(avgWkGan))} / sem · MONTO ${fmtM(Math.round(avgWkMonto))} / sem
+        </div>
+      </div>
+      <div class="card" data-tip="Proveedor con mayor volumen de ventas\nacumulado en 2026.\nEste proveedor genera el mayor\nflujo de facturación a través de la empresa.${topProv&&topProv.comm>0?'\nComisión aplicada: '+topProv.comm+'%':''}">
+        <div class="card-lbl">Mayor proveedor — 2026</div>
+        <div style="font-size:20px;font-weight:900;color:var(--pur)">${topProv?topProv.name:'—'}</div>
+        <div style="font-size:12px;color:var(--txt2);margin-top:5px">${topProv?fmtM(topProv.totalM)+' vendidos':'Sin datos'}</div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="card-lbl" style="margin-bottom:12px">Evolución mensual — Ventas y Ganancia 2026</div>
+      <canvas id="prov-chart" height="260" style="width:100%;display:block"></canvas>
+    </div>
+    <div class="card" style="overflow-x:auto">
+      <div class="card-lbl" style="margin-bottom:16px">Ventas por Proveedor — Enero a ${MONTHS_D[availMonths[availMonths.length-1]]} 2026</div>
+      <table style="min-width:580px">
+        <thead>
+          <tr>
+            <th style="text-align:left">Proveedor</th>
+            <th style="text-align:center">Comisión</th>
+            ${mHeaders}
+            <th>Total 2026</th>
+            <th>Mi Ganancia</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+          <tr class="total-r">
+            <td>BCR TOTAL</td>
+            <td style="text-align:center;color:var(--txt2)">—</td>
+            ${totalRowCells}
+            <td style="color:var(--acc)">${fmtM(totalM)}</td>
+            <td style="color:var(--grn)">${fmtM(totalG)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════════════
+// PROV CHART — Evolución mensual Ventas / Ganancia
+// ══════════════════════════════════════════════════════
+function drawProvChart(monthsData){
+  const canvas = document.getElementById('prov-chart');
+  if(!canvas || !monthsData || !monthsData.length) return;
+
+  // ── Número compacto para etiquetas dentro del gráfico ──
+  function compact(v){
+    if(v>=1e6) return '$'+(v/1e6).toFixed(1).replace('.',',')+'M';
+    if(v>=1e3) return '$'+(v/1e3).toFixed(0)+'K';
+    return '$'+v;
+  }
+
+  // Build per-month totals
+  const sorted = [...monthsData].sort((a,b)=>a.monthIdx-b.monthIdx);
+  const pts = sorted.map(md=>{
+    const ventas = md.providers.reduce((s,p)=>s+(p.m||0),0);
+    const gan    = md.commGanancia || 0;
+    return { label: MONTHS_D[md.monthIdx].slice(0,3).toUpperCase(), ventas, gan };
+  }).filter(p=>p.ventas>0 || p.gan>0);
+
+  if(!pts.length) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const W   = canvas.offsetWidth;
+  const H   = 280;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  // Más padding top para que las etiquetas de valor no choquen con la leyenda
+  const PAD  = {top:52, right:24, bottom:46, left:82};
+  const cW   = W - PAD.left - PAD.right;
+  const cH   = H - PAD.top  - PAD.bottom;
+  const n    = pts.length;
+  const gap  = 14;
+  const barW = Math.max(20, (cW - gap*(n-1)) / n);
+
+  const maxV = Math.max(...pts.map(p=>p.ventas), 1);
+
+  // ── Y grid + labels ──
+  const ticks = 4;
+  ctx.font = `${11}px system-ui,sans-serif`;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for(let i=0;i<=ticks;i++){
+    const y = PAD.top + cH - (i/ticks)*cH;
+    const v = Math.round((i/ticks)*maxV);
+    ctx.fillStyle = 'rgba(255,255,255,.35)';
+    ctx.fillText(compact(v), PAD.left-8, y);
+    ctx.strokeStyle = 'rgba(255,255,255,.06)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(PAD.left, y);
+    ctx.lineTo(PAD.left + cW, y);
+    ctx.stroke();
+  }
+
+  // ── Bars (VENTAS) ──
+  const xs = [];
+  for(let i=0;i<n;i++){
+    const x = PAD.left + i*(barW+gap);
+    xs.push(x);
+    const bH = (pts[i].ventas / maxV) * cH;
+    const y  = PAD.top + cH - bH;
+    const gr = ctx.createLinearGradient(0, y, 0, PAD.top+cH);
+    gr.addColorStop(0, 'rgba(99,179,237,.85)');
+    gr.addColorStop(1, 'rgba(49,130,206,.30)');
+    ctx.fillStyle = gr;
+    ctx.beginPath();
+    ctx.roundRect(x, y, barW, bH, [4,4,0,0]);
+    ctx.fill();
+  }
+
+  // ── Line (GANANCIA) ──
+  const ganPts = pts.map((p,i)=>({
+    x: xs[i] + barW/2,
+    y: PAD.top + cH - (p.gan / maxV) * cH
+  }));
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(72,199,142,.5)';
+  ctx.shadowBlur  = 6;
+  ctx.strokeStyle = '#48c78e';
+  ctx.lineWidth   = 2.5;
+  ctx.lineJoin    = 'round';
+  ctx.beginPath();
+  ganPts.forEach((p,i)=>{ i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y); });
+  ctx.stroke();
+  ctx.restore();
+
+  for(const p of ganPts){
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 4.5, 0, Math.PI*2);
+    ctx.fillStyle = '#48c78e';
+    ctx.fill();
+    ctx.strokeStyle = '#12122a';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // ── X labels ──
+  ctx.fillStyle = 'rgba(255,255,255,.55)';
+  ctx.font = `bold ${11}px system-ui,sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  for(let i=0;i<n;i++){
+    ctx.fillText(pts[i].label, xs[i]+barW/2, PAD.top+cH+9);
+  }
+
+  // ── Value labels on bars (compact, inside bar if tall enough) ──
+  ctx.font = `bold ${10}px system-ui,sans-serif`;
+  ctx.textAlign = 'center';
+  for(let i=0;i<n;i++){
+    if(pts[i].ventas<=0) continue;
+    const bH = (pts[i].ventas/maxV)*cH;
+    const label = compact(pts[i].ventas);
+    if(bH > 26){
+      // inside, near top
+      ctx.fillStyle = 'rgba(255,255,255,.85)';
+      ctx.textBaseline = 'top';
+      ctx.fillText(label, xs[i]+barW/2, PAD.top+cH-bH+6);
+    } else {
+      // outside, above bar
+      ctx.fillStyle = 'rgba(255,255,255,.65)';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(label, xs[i]+barW/2, PAD.top+cH-bH-3);
+    }
+  }
+
+  // ── Ganancia labels on line dots (always above dot) ──
+  ctx.fillStyle = '#48c78e';
+  ctx.font = `bold ${10}px system-ui,sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  for(let i=0;i<n;i++){
+    if(pts[i].gan>0){
+      ctx.fillText(compact(pts[i].gan), ganPts[i].x, ganPts[i].y-9);
+    }
+  }
+
+  // ── Legend — esquina superior derecha ──
+  const ly  = 14;
+  const lH  = 18;
+  // Medir ancho necesario: "● Ventas   — Ganancia"
+  ctx.font = `${11}px system-ui,sans-serif`;
+  const txtV = 'Ventas';
+  const txtG = 'Ganancia';
+  const spacing = 20;
+  const swW     = 12;
+  const totalLW = swW+5+ctx.measureText(txtV).width + spacing + swW+5+ctx.measureText(txtG).width;
+  let lx = W - PAD.right - totalLW;
+
+  // Ventas swatch
+  ctx.fillStyle = 'rgba(99,179,237,.85)';
+  ctx.beginPath();
+  ctx.roundRect(lx, ly+4, swW, lH-8, 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.55)';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(txtV, lx+swW+5, ly+lH/2);
+
+  lx += swW+5+ctx.measureText(txtV).width + spacing;
+
+  // Ganancia line swatch
+  ctx.strokeStyle = '#48c78e';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(lx, ly+lH/2);
+  ctx.lineTo(lx+swW, ly+lH/2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(lx+swW/2, ly+lH/2, 3.5, 0, Math.PI*2);
+  ctx.fillStyle = '#48c78e';
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.55)';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(txtG, lx+swW+5, ly+lH/2);
+}
+
+// ══════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════
+let _prevData = null;
+const TODAY = new Date();
+document.getElementById('hDate').textContent = fmtDate(TODAY);
+
+async function loadData(){
+  const cur  = sheetName(TODAY), prev = prevSheetName(TODAY);
+  document.getElementById('hSub').textContent = 'Actualizando...';
+  try {
+    const [r1,r2] = await Promise.allSettled([gvizFetch(cur), gvizFetch(prev)]);
+    const curRows  = r1.status==='fulfilled' ? gvizRows(r1.value) : [];
+    const prevRows = r2.status==='fulfilled' ? gvizRows(r2.value) : [];
+    if(!curRows.length) throw new Error('Hoja "'+cur+'" vacía o no encontrada.');
+    const curData  = parseSheet(curRows);
+    _prevData      = prevRows.length ? parseSheet(prevRows) : null;
+    renderAll(curData, _prevData, TODAY);
+    document.getElementById('hSub').textContent =
+      cur+' · actualizado '+TODAY.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+  } catch(err){
+    document.getElementById('app').innerHTML = `
+      <div id="app-status">
+        <div style="font-size:32px">⚠️</div>
+        <div style="font-size:16px;font-weight:600">No se pudo cargar</div>
+        <div style="font-size:13px;color:var(--txt2)">${err.message}</div>
+        <a class="err-link" href="${SHEET_LINK}" target="_blank">Abrir Google Sheet →</a>
+      </div>`;
+    document.getElementById('hSub').textContent = 'Error — reintentando en 60s...';
+  }
+}
+
+loadData();
+setInterval(loadData, 5*60*1000);
+</script>
+</body>
+</html>
